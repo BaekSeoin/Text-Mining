@@ -1,0 +1,68 @@
+# <형태소 분석 후 파일을 불러와 TF기반의 term-document matrix를 생성>
+
+from operator import itemgetter
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+import numpy as np
+import ujson
+
+
+FEATURE_POS = ["NNG","VV","VA","MDT","MAG"]
+POS_KEY = "lyric_pos"
+
+def read_documents(input_file_name):
+    """문서들을 주어진 이름의 파일로부터 읽어들인후 CountVectorizer에 입력할 파일 형태로 document set 집합을 생성"""
+    
+    documents = []
+
+    with open(input_file_name, "r", encoding="utf-8") as input_file:
+        for line in input_file:
+            json_obj = ujson.loads(line)
+            text_pos = json_obj[POS_KEY]
+            
+            words = []
+            
+            for sent_pos in text_pos:
+                for word, pos in sent_pos:
+                    if pos not in FEATURE_POS or len(word)==1:
+                        continue
+
+                    words.append(word)
+
+            document = " ".join(words)
+            documents.append(document)
+            
+    documents = np.asarray(documents)
+    
+            
+    return documents
+
+
+            
+def main():
+    global documents
+    """TF 기반의 term-document matrix를 생성하여 파일 저장"""
+    
+    input_file_name = r"/Users/baekseoin/Desktop/19_1학기/텍스트 분석기법/프로젝트/data/알앤비&소울_pos.txt"
+    output_file_name = r"/Users/baekseoin/Desktop/19_1학기/텍스트 분석기법/프로젝트/data/알앤비&소울_pos_TF.txt"
+    documents = read_documents(input_file_name)
+    
+    vectorizer = CountVectorizer(tokenizer=str.split, max_features =100)
+    doc_term_mat = vectorizer.fit_transform(documents)
+   # vectorizer = TfidfVectorizer(tokenizer=str.split, norm="l1",max_features =500)
+    #doc_term_mat = vectorizer.fit_transform(documents)
+      
+    with open(output_file_name, "w", encoding="utf-8") as output_file:
+        doc_num = len(doc_term_mat.toarray())
+        for i in range(doc_num):                            # i는 문서 번호
+            for j in doc_term_mat[i]:
+                for i1, j in zip(j.indices, j.data):
+                    print("{}\t{}\t{}".format(i, vectorizer.get_feature_names()[i1], j), file = output_file)
+                    # 단어 집합 생성 
+
+
+# 실행
+
+main()
+
+print(len(documents))
